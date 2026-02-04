@@ -119,7 +119,7 @@ CREATE TABLE bronze.marketing_salesperson_sales (
 -- =========================
 DROP TABLE IF EXISTS bronze.marketing_discount_info;
 CREATE TABLE bronze.marketing_discount_info (
-    discount_id TEXT PRIMARY KEY,
+    discount_id TEXT,
     description TEXT,
     percent INT,
     active TEXT
@@ -132,8 +132,7 @@ CREATE TABLE bronze.marketing_discount_info (
 DROP TABLE IF EXISTS bronze.marketing_sales_discount;
 CREATE TABLE bronze.marketing_sales_discount (
     discount_id TEXT,
-    sls_ord_num TEXT,
-    sls_sales TEXT
+    sls_ord_num TEXT
 );
 
 

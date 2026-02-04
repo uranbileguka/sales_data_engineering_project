@@ -23,3 +23,6 @@ Thumbs.db
 # *.csv
 # *.png
 # *.pdf
+
+# shell_scripts/*.sh
+*.sh

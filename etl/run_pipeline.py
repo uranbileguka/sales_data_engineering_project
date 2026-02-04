@@ -15,11 +15,13 @@ logging.basicConfig(
 def main():
     run_sql_file("scripts/bronze/ddl_bronze.sql")
     load_bronze()
-    # run_sql_file("scripts/silver/ddl_silver.sql")
-    # run_sql_file("scripts/gold/ddl_gold.sql")
 
-    # 3) Transform to silver/gold (you’ll implement these SQL scripts next)
-    # run_sql_file("scripts/silver/proc_load_silver.sql")
+    # silver
+    run_sql_file("scripts/silver/ddl_silver.sql")
+    run_sql_file("scripts/silver/proc_load_silver.sql")
+    
+    # gold
+    # run_sql_file("scripts/gold/ddl_gold.sql")
     # run_sql_file("scripts/gold/proc_load_gold.sql")
 
     # 4) Run tests

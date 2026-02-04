@@ -1,12 +1,14 @@
 /*
 ===============================================================================
-DDL Script: Create Bronze Tables (PostgreSQL)
+DDL Script: Create Bronze Tables
 ===============================================================================
 Purpose:
-    Creates tables in the 'bronze' schema.
-    Existing tables are dropped before creation.
+    Defines and creates tables in the 'bronze' schema.
+    Existing Bronze tables are dropped and recreated to ensure a clean
+    raw data layer for ingestion.
 ===============================================================================
 */
+
 
 -- Ensure schema exists
 CREATE SCHEMA IF NOT EXISTS bronze;

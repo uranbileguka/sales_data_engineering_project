@@ -2,6 +2,7 @@ import os
 import logging
 from dotenv import load_dotenv
 from etl.load_bronze import main as load_bronze
+from etl.load_silver import main as load_silver
 from etl.utils.sql import run_sql_file
 
 
@@ -18,7 +19,7 @@ def main():
 
     # silver
     run_sql_file("scripts/silver/ddl_silver.sql")
-    run_sql_file("scripts/silver/proc_load_silver.sql")
+    load_silver()
     
     # gold
     # run_sql_file("scripts/gold/ddl_gold.sql")

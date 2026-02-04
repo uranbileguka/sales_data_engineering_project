@@ -27,12 +27,13 @@ CREATE TABLE silver.crm_cust_info (
 DROP TABLE IF EXISTS silver.crm_prd_info;
 CREATE TABLE silver.crm_prd_info (
     prd_id         INT,
+    cat_id         TEXT,
     prd_key        TEXT,
     prd_nm         TEXT,
     prd_cost       INT,
     prd_line       TEXT,
-    prd_start_dt   TIMESTAMP,
-    prd_end_dt     TIMESTAMP,
+    prd_start_dt   DATE,
+    prd_end_dt     DATE,
     dwh_create_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -41,19 +42,12 @@ CREATE TABLE silver.crm_sales_details (
     sls_ord_num   TEXT,
     sls_prd_key   TEXT,
     sls_cust_id   INT,
-    sls_order_dt  INT,
-    sls_ship_dt   INT,
-    sls_due_dt    INT,
+    sls_order_dt  DATE,
+    sls_ship_dt   DATE,
+    sls_due_dt    DATE,
     sls_sales     INT,
     sls_quantity  INT,
     sls_price     INT,
-    dwh_create_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-DROP TABLE IF EXISTS silver.erp_loc_info;
-CREATE TABLE silver.erp_loc_info (
-    cid            TEXT,
-    cntry          TEXT,
     dwh_create_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -64,6 +58,15 @@ CREATE TABLE silver.erp_cust_info (
     gen            TEXT,
     dwh_create_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+DROP TABLE IF EXISTS silver.erp_loc_info;
+CREATE TABLE silver.erp_loc_info (
+    cid            TEXT,
+    cntry          TEXT,
+    dwh_create_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
 
 DROP TABLE IF EXISTS silver.erp_px_cat_info;
 CREATE TABLE silver.erp_px_cat_info (

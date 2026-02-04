@@ -1,45 +1,17 @@
 import os
-from pathlib import Path
 from dotenv import load_dotenv
-from etl.db import get_conn
-
-import sqlparse
+from etl.load_bronze import main as load_bronze
+from etl.utils.sql import run_sql_file
 
 
 load_dotenv()
 
-def run_sql_file(path: str):
-    sql_path = Path(path)
-    sql_text = sql_path.read_text(encoding="utf-8")
-
-    conn = get_conn()
-    try:
-        # ✅ Everything in one transaction
-        with conn:
-            with conn.cursor() as cur:
-                # use sqlparse to split SQL into separate statements
-                statements = sqlparse.split(sql_text)
-
-                for i, stmt in enumerate(statements, start=1):
-                    stmt = stmt.strip()
-                    if not stmt:
-                        continue
-                    try:
-                        cur.execute(stmt)
-                    except Exception as e:
-                        # rollback happens automatically due to `with conn:`
-                        print("\n" + "="*70)
-                        print(f"❌ DDL failed in file: {sql_path}")
-                        print(f"❌ Statement #{i} failed:\n{stmt[:800]}")
-                        print(f"\n❌ Error: {e}")
-                        print("="*70 + "\n")
-                        raise
-    finally:
-        conn.close()
+# run_sql_file moved to `etl.utils.sql.run_sql_file`
 
 def main():
     # 1) Ensure tables exist
     run_sql_file("scripts/bronze/ddl_bronze.sql")
+    load_bronze()
     # run_sql_file("scripts/silver/ddl_silver.sql")
     # run_sql_file("scripts/gold/ddl_gold.sql")
 

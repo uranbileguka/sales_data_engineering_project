@@ -22,8 +22,8 @@ def main():
     load_silver()
     
     # gold
-    # run_sql_file("scripts/gold/ddl_gold.sql")
-    # run_sql_file("scripts/gold/proc_load_gold.sql")
+    run_sql_file("scripts/gold/ddl_gold.sql")
+
 
     # 4) Run tests
     # run_sql_file("tests/quality_checks_bronze.sql")

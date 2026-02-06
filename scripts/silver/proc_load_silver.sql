@@ -258,7 +258,12 @@ BEGIN
 
     RAISE NOTICE '>> Inserting Data Into: silver.marketing_salesperson';
     INSERT INTO silver.marketing_salesperson ( salesperson_id, name, region, email)
-    SELECT salesperson_id, name, region, email
+    SELECT salesperson_id, name, region, 
+    CASE
+    WHEN email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'
+        THEN email
+    ELSE 'n/a'
+    END AS email
     FROM bronze.marketing_salesperson;
 
     end_time := clock_timestamp();

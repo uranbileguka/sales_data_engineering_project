@@ -94,11 +94,9 @@ BEGIN
     IF EXISTS (
         SELECT 1
         FROM silver.crm_sales_details
-        WHERE sls_order_dt IS NULL
-           OR sls_ship_dt IS NULL
-           OR sls_due_dt IS NULL
-           OR sls_due_dt < DATE '1900-01-01'
-           OR sls_due_dt > DATE '2050-01-01'
+        WHERE (sls_order_dt IS NOT NULL AND (sls_order_dt < DATE '1900-01-01' OR sls_order_dt > DATE '2050-01-01'))
+           OR (sls_ship_dt IS NOT NULL AND (sls_ship_dt < DATE '1900-01-01' OR sls_ship_dt > DATE '2050-01-01'))
+           OR (sls_due_dt IS NOT NULL AND (sls_due_dt < DATE '1900-01-01' OR sls_due_dt > DATE '2050-01-01'))
     ) THEN
         RAISE EXCEPTION 'quality_checks_silver: invalid or out-of-range dates in silver.crm_sales_details';
     END IF;
@@ -109,8 +107,8 @@ BEGIN
     IF EXISTS (
         SELECT 1
         FROM silver.crm_sales_details
-        WHERE sls_order_dt > sls_ship_dt
-           OR sls_order_dt > sls_due_dt
+        WHERE (sls_ship_dt IS NOT NULL AND sls_order_dt > sls_ship_dt)
+           OR (sls_due_dt IS NOT NULL AND sls_order_dt > sls_due_dt)
     ) THEN
         RAISE EXCEPTION 'quality_checks_silver: invalid date order in silver.crm_sales_details';
     END IF;

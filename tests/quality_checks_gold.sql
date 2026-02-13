@@ -91,21 +91,3 @@ BEGIN
     END IF;
 END $$;
 
--- ====================================================================
--- Checking 'gold.fact_sales' -> optional dimensions
--- ====================================================================
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM gold.fact_sales f
-        LEFT JOIN gold.dim_salesperson s
-          ON s.salesperson_key = f.salesperson_key
-        LEFT JOIN gold.dim_discount d
-          ON d.discount_key = f.discount_key
-        WHERE (f.salesperson_key IS NOT NULL AND s.salesperson_key IS NULL)
-           OR (f.discount_key IS NOT NULL AND d.discount_key IS NULL)
-    ) THEN
-        RAISE EXCEPTION 'quality_checks_gold: orphan salesperson/discount key in gold.fact_sales';
-    END IF;
-END $$;

@@ -12,7 +12,7 @@ Purpose:
 
 CREATE SCHEMA IF NOT EXISTS silver;
 
-DROP TABLE IF EXISTS silver.crm_cust_info;
+DROP TABLE IF EXISTS silver.crm_cust_info CASCADE;
 CREATE TABLE silver.crm_cust_info (
     cst_id             INT,
     cst_key            TEXT,
@@ -24,7 +24,7 @@ CREATE TABLE silver.crm_cust_info (
     dwh_create_date    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-DROP TABLE IF EXISTS silver.crm_prd_info;
+DROP TABLE IF EXISTS silver.crm_prd_info CASCADE;
 CREATE TABLE silver.crm_prd_info (
     prd_id         INT,
     cat_id         TEXT,
@@ -37,7 +37,7 @@ CREATE TABLE silver.crm_prd_info (
     dwh_create_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-DROP TABLE IF EXISTS silver.crm_sales_details;
+DROP TABLE IF EXISTS silver.crm_sales_details CASCADE;
 CREATE TABLE silver.crm_sales_details (
     sls_ord_num   TEXT,
     sls_prd_key   TEXT,
@@ -51,7 +51,7 @@ CREATE TABLE silver.crm_sales_details (
     dwh_create_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-DROP TABLE IF EXISTS silver.erp_cust_info;
+DROP TABLE IF EXISTS silver.erp_cust_info CASCADE;
 CREATE TABLE silver.erp_cust_info (
     cid            TEXT,
     bdate          DATE,
@@ -59,7 +59,7 @@ CREATE TABLE silver.erp_cust_info (
     dwh_create_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-DROP TABLE IF EXISTS silver.erp_loc_info;
+DROP TABLE IF EXISTS silver.erp_loc_info CASCADE;
 CREATE TABLE silver.erp_loc_info (
     cid            TEXT,
     cntry          TEXT,
@@ -68,7 +68,7 @@ CREATE TABLE silver.erp_loc_info (
 
 
 
-DROP TABLE IF EXISTS silver.erp_px_cat_info;
+DROP TABLE IF EXISTS silver.erp_px_cat_info CASCADE;
 CREATE TABLE silver.erp_px_cat_info (
     id            TEXT,
     cat           TEXT,
@@ -77,7 +77,7 @@ CREATE TABLE silver.erp_px_cat_info (
     dwh_create_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-DROP TABLE IF EXISTS silver.marketing_salesperson;
+DROP TABLE IF EXISTS silver.marketing_salesperson CASCADE;
 CREATE TABLE silver.marketing_salesperson (
     salesperson_id TEXT,
     name           TEXT,
@@ -86,14 +86,14 @@ CREATE TABLE silver.marketing_salesperson (
     dwh_create_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-DROP TABLE IF EXISTS silver.marketing_salesperson_sales;
+DROP TABLE IF EXISTS silver.marketing_salesperson_sales CASCADE;
 CREATE TABLE silver.marketing_salesperson_sales (
     salesperson_id TEXT,
     sls_ord_num     TEXT,
     dwh_create_date  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-DROP TABLE IF EXISTS silver.marketing_discount_info;
+DROP TABLE IF EXISTS silver.marketing_discount_info CASCADE;
 CREATE TABLE silver.marketing_discount_info (
     discount_id    TEXT,
     description    TEXT,
@@ -102,7 +102,7 @@ CREATE TABLE silver.marketing_discount_info (
     dwh_create_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-DROP TABLE IF EXISTS silver.marketing_sales_discount;
+DROP TABLE IF EXISTS silver.marketing_sales_discount CASCADE;
 CREATE TABLE silver.marketing_sales_discount (
     discount_id    TEXT,
     sls_ord_num     TEXT,

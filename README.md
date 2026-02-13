@@ -72,6 +72,5 @@ python etl/run_pipeline.py
 │   ├── silver/
 │   └── init_database.sql
 ├── tests/
-├── docker-compose.yml
-└── py.sh
+└── docker-compose.yml
 ```

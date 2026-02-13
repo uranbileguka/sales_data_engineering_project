@@ -1,86 +1,111 @@
 /*
 ===============================================================================
-Quality Checks
+Quality Checks (Assertion Mode)
 ===============================================================================
 Script Purpose:
-    This script performs quality checks to validate the integrity, consistency, 
-    and accuracy of the Gold Layer. These checks ensure:
-    - Uniqueness of surrogate keys in dimension tables.
-    - Referential integrity between fact and dimension tables.
-    - Validation of relationships in the data model for analytical purposes.
+    This script performs fail-fast quality checks to validate integrity and
+    consistency in the Gold layer.
 
-Usage Notes:
-    - Investigate and resolve any discrepancies found during the checks.
+Behavior:
+    - Each check raises an exception when violations are found.
+    - Pipeline execution stops immediately on first failed check.
 ===============================================================================
 */
 
 -- ====================================================================
 -- Checking 'gold.dim_customers'
 -- ====================================================================
--- Check for Uniqueness of Customer Key in gold.dim_customers
--- Expectation: No results 
-SELECT 
-    customer_key,
-    COUNT(*) AS duplicate_count
-FROM gold.dim_customers
-GROUP BY customer_key
-HAVING COUNT(*) > 1;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM gold.dim_customers
+        GROUP BY customer_key
+        HAVING COUNT(*) > 1
+    ) THEN
+        RAISE EXCEPTION 'quality_checks_gold: duplicate customer_key in gold.dim_customers';
+    END IF;
+END $$;
 
 -- ====================================================================
--- Checking 'gold.product_key'
+-- Checking 'gold.dim_products'
 -- ====================================================================
--- Check for Uniqueness of Product Key in gold.dim_products
--- Expectation: No results 
-SELECT 
-    product_key,
-    COUNT(*) AS duplicate_count
-FROM gold.dim_products
-GROUP BY product_key
-HAVING COUNT(*) > 1;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM gold.dim_products
+        GROUP BY product_key
+        HAVING COUNT(*) > 1
+    ) THEN
+        RAISE EXCEPTION 'quality_checks_gold: duplicate product_key in gold.dim_products';
+    END IF;
+END $$;
 
 -- ====================================================================
 -- Checking 'gold.dim_salesperson'
 -- ====================================================================
--- Check for Uniqueness of Salesperson Key in gold.dim_salesperson
--- Expectation: No results 
-SELECT 
-    salesperson_key,
-    COUNT(*) AS duplicate_count
-FROM gold.dim_salesperson
-GROUP BY salesperson_key
-HAVING COUNT(*) > 1;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM gold.dim_salesperson
+        GROUP BY salesperson_key
+        HAVING COUNT(*) > 1
+    ) THEN
+        RAISE EXCEPTION 'quality_checks_gold: duplicate salesperson_key in gold.dim_salesperson';
+    END IF;
+END $$;
 
 -- ====================================================================
 -- Checking 'gold.dim_discount'
 -- ====================================================================
--- Check for Uniqueness of Discount Key in gold.dim_discount
--- Expectation: No results 
-SELECT 
-    discount_key,
-    COUNT(*) AS duplicate_count
-FROM gold.dim_discount
-GROUP BY discount_key
-HAVING COUNT(*) > 1;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM gold.dim_discount
+        GROUP BY discount_key
+        HAVING COUNT(*) > 1
+    ) THEN
+        RAISE EXCEPTION 'quality_checks_gold: duplicate discount_key in gold.dim_discount';
+    END IF;
+END $$;
 
 -- ====================================================================
--- Checking 'gold.fact_sales'
+-- Checking 'gold.fact_sales' -> core dimensions
 -- ====================================================================
--- Check the data model connectivity between fact and dimensions
-SELECT * 
-FROM gold.fact_sales f
-LEFT JOIN gold.dim_customers c
-ON c.customer_key = f.customer_key
-LEFT JOIN gold.dim_products p
-ON p.product_key = f.product_key
-WHERE p.product_key IS NULL OR c.customer_key IS NULL;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM gold.fact_sales f
+        LEFT JOIN gold.dim_customers c
+          ON c.customer_key = f.customer_key
+        LEFT JOIN gold.dim_products p
+          ON p.product_key = f.product_key
+        WHERE c.customer_key IS NULL
+           OR p.product_key IS NULL
+    ) THEN
+        RAISE EXCEPTION 'quality_checks_gold: orphan customer/product key in gold.fact_sales';
+    END IF;
+END $$;
 
--- Check the data model connectivity between fact_sales and salesperson/discount dimensions
--- Expectation: No results (for non-null foreign keys)
-SELECT *
-FROM gold.fact_sales f
-LEFT JOIN gold.dim_salesperson s
-ON s.salesperson_key = f.salesperson_key
-LEFT JOIN gold.dim_discount d
-ON d.discount_key = f.discount_key
-WHERE (f.salesperson_key IS NOT NULL AND s.salesperson_key IS NULL)
-   OR (f.discount_key IS NOT NULL AND d.discount_key IS NULL);
+-- ====================================================================
+-- Checking 'gold.fact_sales' -> optional dimensions
+-- ====================================================================
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM gold.fact_sales f
+        LEFT JOIN gold.dim_salesperson s
+          ON s.salesperson_key = f.salesperson_key
+        LEFT JOIN gold.dim_discount d
+          ON d.discount_key = f.discount_key
+        WHERE (f.salesperson_key IS NOT NULL AND s.salesperson_key IS NULL)
+           OR (f.discount_key IS NOT NULL AND d.discount_key IS NULL)
+    ) THEN
+        RAISE EXCEPTION 'quality_checks_gold: orphan salesperson/discount key in gold.fact_sales';
+    END IF;
+END $$;

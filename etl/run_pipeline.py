@@ -20,15 +20,11 @@ def main():
     # silver
     run_sql_file("scripts/silver/ddl_silver.sql")
     load_silver()
+    run_sql_file("tests/quality_checks_silver.sql")
     
     # gold
     run_sql_file("scripts/gold/ddl_gold.sql")
-
-
-    # 4) Run tests
-    # run_sql_file("tests/quality_checks_bronze.sql")
-    # run_sql_file("tests/quality_checks_silver.sql")
-    # run_sql_file("tests/quality_checks_gold.sql")
+    run_sql_file("tests/quality_checks_gold.sql")
 
 if __name__ == "__main__":
     main()

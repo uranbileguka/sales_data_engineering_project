@@ -1,260 +1,277 @@
 /*
 ===============================================================================
-Quality Checks
+Quality Checks (Assertion Mode)
 ===============================================================================
 Script Purpose:
-    This script performs various quality checks for data consistency, accuracy, 
-    and standardization across the 'silver' layer. It includes checks for:
-    - Null or duplicate primary keys.
-    - Unwanted spaces in string fields.
-    - Data standardization and consistency.
-    - Invalid date ranges and orders.
-    - Data consistency between related fields.
+    This script performs fail-fast quality checks for data consistency, accuracy,
+    and standardization across the Silver layer.
 
-Usage Notes:
-    - Run these checks after data loading Silver Layer.
-    - Investigate and resolve any discrepancies found during the checks.
+Behavior:
+    - Each check raises an exception when violations are found.
+    - Pipeline execution stops immediately on first failed check.
 ===============================================================================
 */
 
 -- ====================================================================
 -- Checking 'silver.crm_cust_info'
 -- ====================================================================
--- Check for NULLs or Duplicates in Primary Key
--- Expectation: No Results
-SELECT 
-    cst_id,
-    COUNT(*) 
-FROM silver.crm_cust_info
-GROUP BY cst_id
-HAVING COUNT(*) > 1 OR cst_id IS NULL;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM silver.crm_cust_info
+        GROUP BY cst_id
+        HAVING COUNT(*) > 1 OR cst_id IS NULL
+    ) THEN
+        RAISE EXCEPTION 'quality_checks_silver: duplicate or NULL cst_id in silver.crm_cust_info';
+    END IF;
+END $$;
 
--- Check for Unwanted Spaces
--- Expectation: No Results
-SELECT 
-    cst_key 
-FROM silver.crm_cust_info
-WHERE cst_key != TRIM(cst_key);
-
--- Data Standardization & Consistency
-SELECT DISTINCT 
-    cst_marital_status 
-FROM silver.crm_cust_info;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM silver.crm_cust_info
+        WHERE cst_key <> TRIM(cst_key)
+    ) THEN
+        RAISE EXCEPTION 'quality_checks_silver: unwanted spaces in silver.crm_cust_info.cst_key';
+    END IF;
+END $$;
 
 -- ====================================================================
 -- Checking 'silver.crm_prd_info'
 -- ====================================================================
--- Check for NULLs or Duplicates in Primary Key
--- Expectation: No Results
-SELECT 
-    prd_id,
-    COUNT(*) 
-FROM silver.crm_prd_info
-GROUP BY prd_id
-HAVING COUNT(*) > 1 OR prd_id IS NULL;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM silver.crm_prd_info
+        GROUP BY prd_id
+        HAVING COUNT(*) > 1 OR prd_id IS NULL
+    ) THEN
+        RAISE EXCEPTION 'quality_checks_silver: duplicate or NULL prd_id in silver.crm_prd_info';
+    END IF;
+END $$;
 
--- Check for Unwanted Spaces
--- Expectation: No Results
-SELECT 
-    prd_nm 
-FROM silver.crm_prd_info
-WHERE prd_nm != TRIM(prd_nm);
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM silver.crm_prd_info
+        WHERE prd_nm <> TRIM(prd_nm)
+    ) THEN
+        RAISE EXCEPTION 'quality_checks_silver: unwanted spaces in silver.crm_prd_info.prd_nm';
+    END IF;
+END $$;
 
--- Check for NULLs or Negative Values in Cost
--- Expectation: No Results
-SELECT 
-    prd_cost 
-FROM silver.crm_prd_info
-WHERE prd_cost < 0 OR prd_cost IS NULL;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM silver.crm_prd_info
+        WHERE prd_cost < 0 OR prd_cost IS NULL
+    ) THEN
+        RAISE EXCEPTION 'quality_checks_silver: invalid prd_cost in silver.crm_prd_info';
+    END IF;
+END $$;
 
--- Data Standardization & Consistency
-SELECT DISTINCT 
-    prd_line 
-FROM silver.crm_prd_info;
-
--- Check for Invalid Date Orders (Start Date > End Date)
--- Expectation: No Results
-SELECT 
-    * 
-FROM silver.crm_prd_info
-WHERE prd_end_dt < prd_start_dt;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM silver.crm_prd_info
+        WHERE prd_end_dt < prd_start_dt
+    ) THEN
+        RAISE EXCEPTION 'quality_checks_silver: prd_end_dt < prd_start_dt in silver.crm_prd_info';
+    END IF;
+END $$;
 
 -- ====================================================================
 -- Checking 'silver.crm_sales_details'
 -- ====================================================================
--- Check for Invalid Dates
--- Expectation: No Invalid Dates
-SELECT 
-    NULLIF(sls_due_dt, 0) AS sls_due_dt 
-FROM bronze.crm_sales_details
-WHERE sls_due_dt <= 0 
-    OR LEN(sls_due_dt) != 8 
-    OR sls_due_dt > 20500101 
-    OR sls_due_dt < 19000101;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM silver.crm_sales_details
+        WHERE sls_order_dt IS NULL
+           OR sls_ship_dt IS NULL
+           OR sls_due_dt IS NULL
+           OR sls_due_dt < DATE '1900-01-01'
+           OR sls_due_dt > DATE '2050-01-01'
+    ) THEN
+        RAISE EXCEPTION 'quality_checks_silver: invalid or out-of-range dates in silver.crm_sales_details';
+    END IF;
+END $$;
 
--- Check for Invalid Date Orders (Order Date > Shipping/Due Dates)
--- Expectation: No Results
-SELECT 
-    * 
-FROM silver.crm_sales_details
-WHERE sls_order_dt > sls_ship_dt 
-   OR sls_order_dt > sls_due_dt;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM silver.crm_sales_details
+        WHERE sls_order_dt > sls_ship_dt
+           OR sls_order_dt > sls_due_dt
+    ) THEN
+        RAISE EXCEPTION 'quality_checks_silver: invalid date order in silver.crm_sales_details';
+    END IF;
+END $$;
 
--- Check Data Consistency: Sales = Quantity * Price
--- Expectation: No Results
-SELECT DISTINCT 
-    sls_sales,
-    sls_quantity,
-    sls_price 
-FROM silver.crm_sales_details
-WHERE sls_sales != sls_quantity * sls_price
-   OR sls_sales IS NULL 
-   OR sls_quantity IS NULL 
-   OR sls_price IS NULL
-   OR sls_sales <= 0 
-   OR sls_quantity <= 0 
-   OR sls_price <= 0
-ORDER BY sls_sales, sls_quantity, sls_price;
-
--- ====================================================================
--- Checking 'silver.erp_cust_az12'
--- ====================================================================
--- Identify Out-of-Range Dates
--- Expectation: Birthdates between 1924-01-01 and Today
-SELECT DISTINCT 
-    bdate 
-FROM silver.erp_cust_az12
-WHERE bdate < '1924-01-01' 
-   OR bdate > GETDATE();
-
--- Data Standardization & Consistency
-SELECT DISTINCT 
-    gen 
-FROM silver.erp_cust_az12;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM silver.crm_sales_details
+        WHERE sls_sales <> sls_quantity * sls_price
+           OR sls_sales IS NULL
+           OR sls_quantity IS NULL
+           OR sls_price IS NULL
+           OR sls_sales <= 0
+           OR sls_quantity <= 0
+           OR sls_price <= 0
+    ) THEN
+        RAISE EXCEPTION 'quality_checks_silver: sales consistency violation in silver.crm_sales_details';
+    END IF;
+END $$;
 
 -- ====================================================================
--- Checking 'silver.erp_loc_a101'
+-- Checking 'silver.erp_cust_info'
 -- ====================================================================
--- Data Standardization & Consistency
-SELECT DISTINCT 
-    cntry 
-FROM silver.erp_loc_a101
-ORDER BY cntry;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM silver.erp_cust_info
+        WHERE bdate < DATE '1924-01-01'
+           OR bdate > CURRENT_DATE
+    ) THEN
+        RAISE EXCEPTION 'quality_checks_silver: out-of-range bdate in silver.erp_cust_info';
+    END IF;
+END $$;
 
 -- ====================================================================
--- Checking 'silver.erp_px_cat_g1v2'
+-- Checking 'silver.erp_px_cat_info'
 -- ====================================================================
--- Check for Unwanted Spaces
--- Expectation: No Results
-SELECT 
-    * 
-FROM silver.erp_px_cat_g1v2
-WHERE cat != TRIM(cat) 
-   OR subcat != TRIM(subcat) 
-   OR maintenance != TRIM(maintenance);
-
--- Data Standardization & Consistency
-SELECT DISTINCT 
-    maintenance 
-FROM silver.erp_px_cat_g1v2;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM silver.erp_px_cat_info
+        WHERE cat <> TRIM(cat)
+           OR subcat <> TRIM(subcat)
+           OR maintenance <> TRIM(maintenance)
+    ) THEN
+        RAISE EXCEPTION 'quality_checks_silver: unwanted spaces in silver.erp_px_cat_info';
+    END IF;
+END $$;
 
 -- ====================================================================
 -- Checking 'silver.marketing_salesperson'
 -- ====================================================================
--- Check for NULLs or Duplicates in Primary Key
--- Expectation: No Results
-SELECT
-    salesperson_id,
-    COUNT(*)
-FROM silver.marketing_salesperson
-GROUP BY salesperson_id
-HAVING COUNT(*) > 1 OR salesperson_id IS NULL;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM silver.marketing_salesperson
+        GROUP BY salesperson_id
+        HAVING COUNT(*) > 1 OR salesperson_id IS NULL
+    ) THEN
+        RAISE EXCEPTION 'quality_checks_silver: duplicate or NULL salesperson_id in silver.marketing_salesperson';
+    END IF;
+END $$;
 
--- Check for Unwanted Spaces
--- Expectation: No Results
-SELECT
-    salesperson_id,
-    name,
-    region,
-    email
-FROM silver.marketing_salesperson
-WHERE name != TRIM(name)
-   OR region != TRIM(region)
-   OR email != TRIM(email);
-
--- Data Standardization & Consistency
-SELECT DISTINCT
-    region
-FROM silver.marketing_salesperson
-ORDER BY region;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM silver.marketing_salesperson
+        WHERE name <> TRIM(name)
+           OR region <> TRIM(region)
+           OR email <> TRIM(email)
+    ) THEN
+        RAISE EXCEPTION 'quality_checks_silver: unwanted spaces in silver.marketing_salesperson';
+    END IF;
+END $$;
 
 -- ====================================================================
 -- Checking 'silver.marketing_discount_info'
 -- ====================================================================
--- Check for NULLs or Duplicates in Primary Key
--- Expectation: No Results
-SELECT
-    discount_id,
-    COUNT(*)
-FROM silver.marketing_discount_info
-GROUP BY discount_id
-HAVING COUNT(*) > 1 OR discount_id IS NULL;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM silver.marketing_discount_info
+        GROUP BY discount_id
+        HAVING COUNT(*) > 1 OR discount_id IS NULL
+    ) THEN
+        RAISE EXCEPTION 'quality_checks_silver: duplicate or NULL discount_id in silver.marketing_discount_info';
+    END IF;
+END $$;
 
--- Check for Invalid Discount Percent Range
--- Expectation: No Results
-SELECT
-    discount_id,
-    percent
-FROM silver.marketing_discount_info
-WHERE percent < 0 OR percent > 100 OR percent IS NULL;
-
--- Data Standardization & Consistency
-SELECT DISTINCT
-    active
-FROM silver.marketing_discount_info;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM silver.marketing_discount_info
+        WHERE percent < 0 OR percent > 100 OR percent IS NULL
+    ) THEN
+        RAISE EXCEPTION 'quality_checks_silver: invalid percent in silver.marketing_discount_info';
+    END IF;
+END $$;
 
 -- ====================================================================
 -- Checking 'silver.marketing_salesperson_sales'
 -- ====================================================================
--- Referential Integrity: salesperson_id must exist in master table
--- Expectation: No Results
-SELECT
-    mss.salesperson_id,
-    mss.sls_ord_num
-FROM silver.marketing_salesperson_sales mss
-LEFT JOIN silver.marketing_salesperson ms
-ON ms.salesperson_id = mss.salesperson_id
-WHERE ms.salesperson_id IS NULL;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM silver.marketing_salesperson_sales mss
+        LEFT JOIN silver.marketing_salesperson ms
+          ON ms.salesperson_id = mss.salesperson_id
+        WHERE ms.salesperson_id IS NULL
+    ) THEN
+        RAISE EXCEPTION 'quality_checks_silver: orphan salesperson_id in silver.marketing_salesperson_sales';
+    END IF;
+END $$;
 
--- Referential Integrity: order number must exist in sales details
--- Expectation: No Results
-SELECT
-    mss.salesperson_id,
-    mss.sls_ord_num
-FROM silver.marketing_salesperson_sales mss
-LEFT JOIN silver.crm_sales_details csd
-ON csd.sls_ord_num = mss.sls_ord_num
-WHERE csd.sls_ord_num IS NULL;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM silver.marketing_salesperson_sales mss
+        LEFT JOIN silver.crm_sales_details csd
+          ON csd.sls_ord_num = mss.sls_ord_num
+        WHERE csd.sls_ord_num IS NULL
+    ) THEN
+        RAISE EXCEPTION 'quality_checks_silver: orphan sls_ord_num in silver.marketing_salesperson_sales';
+    END IF;
+END $$;
 
 -- ====================================================================
 -- Checking 'silver.marketing_sales_discount'
 -- ====================================================================
--- Referential Integrity: discount_id must exist in discount master table
--- Expectation: No Results
-SELECT
-    msd.discount_id,
-    msd.sls_ord_num
-FROM silver.marketing_sales_discount msd
-LEFT JOIN silver.marketing_discount_info mdi
-ON mdi.discount_id = msd.discount_id
-WHERE mdi.discount_id IS NULL;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM silver.marketing_sales_discount msd
+        LEFT JOIN silver.marketing_discount_info mdi
+          ON mdi.discount_id = msd.discount_id
+        WHERE mdi.discount_id IS NULL
+    ) THEN
+        RAISE EXCEPTION 'quality_checks_silver: orphan discount_id in silver.marketing_sales_discount';
+    END IF;
+END $$;
 
--- Referential Integrity: order number must exist in sales details
--- Expectation: No Results
-SELECT
-    msd.discount_id,
-    msd.sls_ord_num
-FROM silver.marketing_sales_discount msd
-LEFT JOIN silver.crm_sales_details csd
-ON csd.sls_ord_num = msd.sls_ord_num
-WHERE csd.sls_ord_num IS NULL;
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM silver.marketing_sales_discount msd
+        LEFT JOIN silver.crm_sales_details csd
+          ON csd.sls_ord_num = msd.sls_ord_num
+        WHERE csd.sls_ord_num IS NULL
+    ) THEN
+        RAISE EXCEPTION 'quality_checks_silver: orphan sls_ord_num in silver.marketing_sales_discount';
+    END IF;
+END $$;
